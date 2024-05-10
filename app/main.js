@@ -2,6 +2,7 @@ const net = require('net');
 const fs = require('fs');
 const zlib = require('zlib');
 
+
 class HTTPResponse {
     constructor(status_code, body = null, headers = null) {
         this.status_code = status_code;
@@ -56,7 +57,6 @@ class HTTPRequest {
     }
 
     get status_line() {
-        console.log(this.raw_contents);
         return this.raw_contents.split('\r\n')[0];
     }
 
@@ -72,8 +72,6 @@ class HTTPRequest {
         return `<HTTPRequest ${this.method} ${this.path}>`;
     }
 }
-
-const SUPPORTED_COMPRESSION_TYPES = ["gzip"];
 
 function handle_connection(conn, data_directory) {
     conn.on('data', (data) => {
@@ -111,7 +109,7 @@ function handle_connection(conn, data_directory) {
             if (request.method === "GET") {
                 const filename = request.path.split("/files/")[1];
                 const file_path = `${data_directory}/${filename}`;
-
+                console.debug("🚀  file: main.js:114  conn.on  file_path:", file_path);
                 if (fs.existsSync(file_path)) {
                     const body = fs.readFileSync(file_path);
                     const response = new HTTPResponse(200, body, {
@@ -138,10 +136,14 @@ function handle_connection(conn, data_directory) {
 }
 
 function main() {
+
+    console.log(process.argv)
     const server = net.createServer((conn) => {
         console.log('Client connected', conn.remoteAddress, conn.remotePort);
-
-        handle_connection(conn, process.cwd());
+        // Get directory --directory <directory> and use that as data directory
+        // TODO: Make this better
+        const data_directory = process.argv[3] || process.cwd()
+        handle_connection(conn, data_directory );
     });
 
     server.listen(4221, 'localhost', () => {
