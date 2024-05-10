@@ -56,6 +56,7 @@ class HTTPRequest {
     }
 
     get status_line() {
+        console.log(this.raw_contents);
         return this.raw_contents.split('\r\n')[0];
     }
 
@@ -76,7 +77,7 @@ const SUPPORTED_COMPRESSION_TYPES = ["gzip"];
 
 function handle_connection(conn, data_directory) {
     conn.on('data', (data) => {
-        const request = new HTTPRequest(data);
+        const request = new HTTPRequest(data.toString());
         console.log(request.toString());
 
         if (request.path === "/") {
