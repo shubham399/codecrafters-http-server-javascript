@@ -27,8 +27,14 @@ class HTTPResponse {
     }
 
     toString() {
-        return `${this.status_line}\r\n${this.headers_section}\r\n\r\n${this.body || ''}`;
-    }
+        const statusBuffer = Buffer.from(`${this.status_line}\r\n`);
+        const headersBuffer = Buffer.from(`${this.headers_section}\r\n\r\n`);
+        const response = Buffer.concat([statusBuffer, headersBuffer, this.body || Buffer.from('')]);
+        return  response
+        }
+    // toString() {
+    //     return `${this.status_line}\r\n${this.headers_section}\r\n\r\n${this.body || ''}`;
+    // }
 }
 
 class HTTPRequest {
@@ -84,12 +90,15 @@ function handle_connection(conn, data_directory) {
             const value = request.path.split("/echo/")[1];
             const accepted_encoding = (request.headers["Accept-Encoding"] || "").toLowerCase();
             console.log(accepted_encoding, accepted_encoding.includes("gzip"));
-            
+
             if (accepted_encoding.includes("gzip")) {
-                const compressed_data = zlib.gzipSync(Buffer.from(value, 'utf-8'));
-                const hex_encoded_data = compressed_data.toString('hex');
-                console.log(hex_encoded_data);
-                const response = new HTTPResponse(200, compressed_data, {
+                const gzipData = zlib.gzipSync(Buffer.from(value)); // Convert value to Buffer
+                console.log(gzipData.toString('hex')); // Log the compressed data as bytes
+                const decompressedData = zlib.gunzipSync(gzipData);
+                // Decode the decompressed data (assuming UTF-8 encoding)
+                const originalString = decompressedData.toString('utf-8');
+                console.log(originalString);
+                const response = new HTTPResponse(200, gzipData, {
                     "Content-Type": "text/plain",
                     "Content-Encoding": "gzip"
                 });
@@ -143,7 +152,7 @@ function main() {
         // Get directory --directory <directory> and use that as data directory
         // TODO: Make this better
         const data_directory = process.argv[3] || process.cwd()
-        handle_connection(conn, data_directory );
+        handle_connection(conn, data_directory);
     });
 
     server.listen(4221, 'localhost', () => {
